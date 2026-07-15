@@ -1,0 +1,24 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+
+# --- Virtualenv ---
+.venv/
+venv/
+env/
+
+# --- Local data cache ---
+# Rebuilt from DataSF on first run (see README). Not committed.
+data/cache.json
+data/*.tmp
+
+# --- Secrets / local environment ---
+.env
+.env.*
+!.env.example
+
+# --- Editor / OS ---
+.DS_Store
+.vscode/
+.idea/
+*.swp
