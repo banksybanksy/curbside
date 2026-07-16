@@ -1,8 +1,8 @@
-# SF Food Truck Finder
+# Curbside
 
 Find San Francisco's permitted mobile food vendors on a map: where they park, what they serve, which days they are there, and whether their permit is current.
 
-![Map of SF with food-truck pins and a filterable sidebar](docs/screenshots/map-overview.png)
+![Map of SF with food-truck pins and a filterable sidebar](docs/screenshots/map-overview.jpg)
 
 ## What it does
 
@@ -38,14 +38,13 @@ Both are Socrata Open Data API (SODA) datasets. No API key is required; an optio
 
 **What I chose not to do.** I did not silently drop trucks with bad coordinates or missing schedules, because that would hide real permitted vendors and make the map look more complete than the data actually is. I did not try to guess or geocode missing coordinates.
 
-![A truck popup showing its full weekly schedule](docs/screenshots/truck-popup.png)
+![A truck popup showing its full weekly schedule](docs/screenshots/truck-popup.jpg)
 
 ## Running it locally
 
 Requires **Python 3.9+**.
 
 ```bash
-cd FoodTrucks
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/python app.py
@@ -82,12 +81,8 @@ JSON API:
 
 Table view, for scanning vendors, food, addresses, and operating days at a glance:
 
-![Table view](docs/screenshots/table-view.png)
+![Table view](docs/screenshots/table-view.jpg)
 
 Filtering to a single food type (the map and list update together):
 
-![Filtered to taco trucks](docs/screenshots/food-filter-tacos.png)
-
-The layout is responsive:
-
-![Mobile map view](docs/screenshots/mobile-map.png)
+![Filtered to taco trucks](docs/screenshots/food-filter-tacos.jpg)
