@@ -1,5 +1,7 @@
 # Curbside
 
+[![CI](https://github.com/banksybanksy/curbside/actions/workflows/ci.yml/badge.svg)](https://github.com/banksybanksy/curbside/actions/workflows/ci.yml)
+
 A map of San Francisco's permitted food trucks and carts, built because the city publishes where they may operate but splits it across two datasets that are hard to read on their own.
 
 ![Curbside: SF map with food-truck pins and a filterable sidebar](docs/screenshots/map-overview.jpg)
