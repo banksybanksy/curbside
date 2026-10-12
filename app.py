@@ -1,11 +1,12 @@
-"""Food Truck Finder — local Flask server.
+"""Curbside: a local Flask server for San Francisco's mobile food vendor permits.
 
-Fetches SF mobile food vendor data from DataSF's SODA API, caches it in
-data/cache.json, and serves it to the frontend. The SODA API is only hit
-on first run or when you press "Refresh data" (POST /api/refresh).
+Fetches the permit and schedule datasets from DataSF's SODA API, joins them,
+caches the result in data/cache.json and serves it to the frontend. DataSF is
+only hit on first run or on POST /api/refresh.
 """
 
 import json
+import logging
 import os
 import threading
 from collections import defaultdict
@@ -25,11 +26,12 @@ PAGE_SIZE = 1000
 PORT = 5757
 
 app = Flask(__name__, static_folder="static", static_url_path="")
+log = logging.getLogger(__name__)
 _refresh_lock = threading.Lock()
 
 
 def _soda_headers():
-    # Optional: set SODA_APP_TOKEN in your environment to raise rate limits.
+    # An app token only raises DataSF's rate limit; the API works without one.
     token = os.environ.get("SODA_APP_TOKEN")
     return {"X-App-Token": token} if token else {}
 
@@ -63,7 +65,15 @@ def _parse_latlng(row):
     return lat, lng
 
 
+def _int_or(value, default):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def _build_trucks(permits, schedules):
+    """Join permits to schedules. The schedule's `locationid` is the permit's `objectid`."""
     sched_by_location = defaultdict(list)
     for s in schedules:
         loc_id = s.get("locationid")
@@ -82,7 +92,7 @@ def _build_trucks(permits, schedules):
             entries.append(
                 {
                     "day": s.get("dayofweekstr"),
-                    "dayOrder": int(s.get("dayorder", 0)),
+                    "dayOrder": _int_or(s.get("dayorder"), 0),
                     "start": s.get("starttime", ""),
                     "end": s.get("endtime", ""),
                     "start24": s.get("start24", ""),
@@ -147,7 +157,8 @@ def api_trucks():
         try:
             payload = build_cache()
         except requests.RequestException as e:
-            return jsonify({"error": f"Could not reach DataSF: {e}"}), 502
+            log.warning("DataSF fetch failed: %s", e)
+            return jsonify({"error": f"Could not reach DataSF ({type(e).__name__})."}), 502
     return jsonify(payload)
 
 
@@ -158,15 +169,16 @@ def api_refresh():
     try:
         payload = build_cache()
     except requests.RequestException as e:
-        # Keep serving the old cache if DataSF is unreachable.
-        return jsonify({"error": f"Refresh failed, kept existing cache: {e}"}), 502
+        # build_cache only replaces the file after both fetches succeed, so the old cache survives.
+        log.warning("DataSF refresh failed: %s", e)
+        return jsonify({"error": f"Refresh failed, could not reach DataSF ({type(e).__name__})."}), 502
     finally:
         _refresh_lock.release()
     return jsonify({"fetched_at": payload["fetched_at"], "count": len(payload["trucks"])})
 
 
 if __name__ == "__main__":
-    print(f"Food Truck Finder → http://localhost:{PORT}")
+    print(f"Curbside → http://localhost:{PORT}")
     if load_cache() is None:
-        print("No local cache yet — the first page load will fetch from DataSF.")
+        print("No local cache yet. The first page load will fetch from DataSF.")
     app.run(port=PORT, debug=False)

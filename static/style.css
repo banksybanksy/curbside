@@ -4,19 +4,20 @@
   --glow-a: rgba(255, 201, 60, 0.35);
   --glow-b: rgba(255, 92, 56, 0.14);
   --panel: #fffdf8;
-  --ink: #2b2119;
   --text: #2b2119;
-  --muted: #8a7a66;
+  --muted: #6f604e;
   --border: #2b2119;
   --accent: #ff5c38;
-  --accent-ink: #ffffff;
+  --accent-ink: #2b2119;
+  --accent-text: #b23a1f;
   --accent-soft: #ffe4d8;
-  --sun: #ffc93c;
-  --green: #00a884;
-  --amber: #e8960c;
-  --red: #e0442b;
+  --green: #007a60;
+  --on-green: #ffffff;
+  --amber: #9a5b00;
+  --red: #b8331c;
   --card-shadow: 3px 3px 0 rgba(43, 33, 25, 0.18);
   --card-shadow-lift: 5px 5px 0 rgba(43, 33, 25, 0.22);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -26,15 +27,15 @@
     --glow-a: rgba(255, 175, 60, 0.10);
     --glow-b: rgba(255, 92, 56, 0.10);
     --panel: #2e2620;
-    --ink: #f5ead9;
     --text: #f5ead9;
     --muted: #a8998a;
     --border: #4a3d31;
     --accent: #ff6a45;
-    --accent-ink: #fff;
+    --accent-ink: #1f1811;
+    --accent-text: #ff6a45;
     --accent-soft: #45291f;
-    --sun: #e0ae2e;
     --green: #2fc79e;
+    --on-green: #1f1811;
     --amber: #e8b04a;
     --red: #f07a5e;
     --card-shadow: 3px 3px 0 rgba(0, 0, 0, 0.45);
@@ -62,31 +63,15 @@ html, body {
   color: var(--text);
 }
 
-/* ---------- Motion ---------- */
-@keyframes float-in {
-  from { opacity: 0; transform: translateY(9px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes pop-in {
-  0% { opacity: 0; transform: scale(0.2); }
-  70% { transform: scale(1.12); }
-  100% { opacity: 1; transform: scale(1); }
-}
+/* ---------- Motion ----------
+   Kept to press feedback, the refresh spinner, the open-now pulse and the logo
+   hover. Lists and pins re-render on every keystroke, so they don't animate. */
 @keyframes wiggle {
   0%, 100% { transform: rotate(-8deg); }
   25% { transform: rotate(6deg) scale(1.12); }
   60% { transform: rotate(-12deg) scale(1.08); }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
-@keyframes bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-7px); }
-}
-@keyframes pop-count {
-  0% { transform: scale(1); }
-  40% { transform: scale(1.16); color: var(--accent); }
-  100% { transform: scale(1); }
-}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -94,6 +79,12 @@ html, body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+button, .chip, .result-item {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* dvh tracks the real viewport as iOS Safari's toolbar shows/hides, so the
@@ -110,7 +101,9 @@ html, body {
   border-right: 2px solid var(--border);
 }
 
-.sidebar-head { padding: 16px 16px 12px; }
+.sidebar-head {
+  padding: calc(16px + env(safe-area-inset-top, 0px)) 16px 12px calc(16px + env(safe-area-inset-left, 0px));
+}
 
 .sidebar-head h1 {
   margin: 0;
@@ -123,10 +116,6 @@ html, body {
   transform: rotate(-8deg);
   transform-origin: 70% 70%;
   margin-right: 2px;
-  cursor: pointer;
-}
-.sidebar-head h1:hover .logo-emoji {
-  animation: wiggle 0.6s ease-in-out;
 }
 
 .tagline {
@@ -144,8 +133,11 @@ html, body {
   font-size: 0.74rem;
   color: var(--muted);
 }
+#data-freshness { min-width: 0; overflow-wrap: anywhere; }
 
 #refresh-btn {
+  flex: none;
+  white-space: nowrap;
   border: 2px solid var(--border);
   background: var(--panel);
   color: var(--text);
@@ -156,14 +148,12 @@ html, body {
   font-family: inherit;
   cursor: pointer;
   box-shadow: var(--card-shadow);
-  transition: transform 0.1s, box-shadow 0.1s;
+  transition: transform 120ms var(--ease-out), box-shadow 120ms var(--ease-out);
 }
-#refresh-btn:hover { transform: translate(-1px, -1px); box-shadow: var(--card-shadow-lift); }
 #refresh-btn:active { transform: translate(2px, 2px); box-shadow: none; }
 #refresh-btn:disabled { opacity: 0.65; cursor: wait; transform: none; }
 
 .refresh-icon { display: inline-block; }
-#refresh-btn:hover .refresh-icon { animation: spin 0.7s ease-in-out; }
 #refresh-btn.loading .refresh-icon { animation: spin 0.8s linear infinite; }
 
 /* ---------- Filters ---------- */
@@ -187,8 +177,8 @@ html, body {
   box-shadow: var(--card-shadow);
 }
 .filters input::placeholder { color: var(--muted); font-weight: 500; }
-.filters input:focus, .filters select:focus {
-  outline: 3px solid var(--accent);
+button:focus-visible, .filters input:focus, .filters select:focus {
+  outline: 3px solid var(--accent-text);
   outline-offset: 1px;
 }
 
@@ -205,9 +195,9 @@ html, body {
   font-family: inherit;
   cursor: pointer;
   box-shadow: var(--card-shadow);
-  transition: transform 0.1s, box-shadow 0.1s, background 0.1s;
+  transition: transform 120ms var(--ease-out), box-shadow 120ms var(--ease-out);
 }
-.chip:hover { transform: translate(-1px, -1px); box-shadow: var(--card-shadow-lift); }
+.chip:active { transform: translate(2px, 2px); box-shadow: none; }
 .chip.active {
   background: var(--accent);
   color: var(--accent-ink);
@@ -231,14 +221,13 @@ html, body {
 .linkish {
   border: none;
   background: none;
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: 0.78rem;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
   padding: 0;
 }
-.linkish:hover { text-decoration: underline; }
 
 /* ---------- Results list ---------- */
 .results {
@@ -246,18 +235,20 @@ html, body {
   overflow-y: auto;
   /* Scrolling the list stays in the list — it never chains to the page. */
   overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
   margin: 0;
   padding: 4px 16px 16px;
   list-style: none;
   display: flex;
   flex-direction: column;
   gap: 9px;
-  scrollbar-width: none; /* Firefox */
+  scrollbar-width: none;
 }
-.results { -ms-overflow-style: none; } /* legacy Edge/IE */
 
 .result-item {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
   display: flex;
   gap: 11px;
   align-items: flex-start;
@@ -267,16 +258,9 @@ html, body {
   background: var(--panel);
   box-shadow: var(--card-shadow);
   cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.1s;
-  animation: float-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(var(--i, 0) * 22ms);
+  transition: transform 120ms var(--ease-out), box-shadow 120ms var(--ease-out);
 }
-.result-item:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: var(--card-shadow-lift);
-}
-.result-item:hover .r-emoji { transform: rotate(-6deg) scale(1.08); }
-.r-emoji { transition: transform 0.15s ease; }
+.result-item:active { transform: translate(2px, 2px); box-shadow: none; }
 .result-item.selected {
   background: var(--accent-soft);
   outline: 3px solid var(--accent);
@@ -295,16 +279,17 @@ html, body {
   border-radius: 12px;
 }
 
-.r-body { min-width: 0; flex: 1; }
+.r-body { min-width: 0; flex: 1; overflow-wrap: anywhere; }
 
 .result-item .r-name {
+  align-items: flex-start;
   font-weight: 800;
   font-size: 0.9rem;
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
   gap: 8px;
 }
+.result-item .r-name .badge { flex: none; }
 
 .result-item .r-food {
   font-size: 0.77rem;
@@ -316,7 +301,7 @@ html, body {
   overflow: hidden;
 }
 
-.result-item .r-addr { font-size: 0.74rem; color: var(--muted); margin-top: 3px; font-weight: 600; }
+.result-item .r-addr { display: block; font-size: 0.74rem; color: var(--muted); margin-top: 3px; font-weight: 600; }
 .result-item .r-nomap { color: var(--amber); }
 
 .empty-note {
@@ -330,7 +315,6 @@ html, body {
   font-size: 2.2rem;
   display: block;
   margin-bottom: 8px;
-  animation: bob 2.4s ease-in-out infinite;
 }
 
 /* ---------- Badges ---------- */
@@ -347,7 +331,7 @@ html, body {
 .badge.requested { color: var(--amber); background: color-mix(in srgb, var(--amber) 12%, transparent); }
 .badge.expired, .badge.suspend { color: var(--red); background: color-mix(in srgb, var(--red) 12%, transparent); }
 .badge.open-now {
-  color: #fff;
+  color: var(--on-green);
   background: var(--green);
   border-color: var(--green);
 }
@@ -358,7 +342,7 @@ html, body {
   height: 6px;
   margin-right: 4px;
   border-radius: 50%;
-  background: #fff;
+  background: currentColor;
   animation: pulse 1.6s ease-in-out infinite;
 }
 @keyframes pulse {
@@ -375,7 +359,7 @@ html, body {
 
 .view-toggle {
   position: absolute;
-  bottom: 18px;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   z-index: 2;
@@ -419,6 +403,7 @@ html, body {
   overflow: hidden;
   box-shadow: var(--card-shadow);
   font-size: 0.83rem;
+  min-width: 640px;
 }
 
 .table-wrap th, .table-wrap td {
@@ -439,7 +424,8 @@ html, body {
   border-bottom: 2px solid var(--border);
 }
 
-.table-wrap tr:hover td { background: var(--accent-soft); cursor: pointer; }
+.table-wrap tbody tr { cursor: pointer; }
+.table-wrap tbody tr:focus-visible { outline: 3px solid var(--accent-text); outline-offset: -3px; }
 
 /* ---------- Map pins & popups ---------- */
 .pin-emoji {
@@ -452,10 +438,7 @@ html, body {
   border: 2.5px solid var(--green);
   border-radius: 50% 50% 50% 4px;
   box-shadow: 2px 2px 0 rgba(43, 33, 25, 0.3);
-  transition: transform 0.12s;
-  animation: pop-in 0.34s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
-.pin-emoji:hover { transform: scale(1.22) translateY(-2px); z-index: 10; }
 .pin-emoji.requested { border-color: var(--amber); }
 .pin-emoji.expired, .pin-emoji.suspend, .pin-emoji.unknown { border-color: var(--red); filter: grayscale(0.6); }
 
@@ -482,11 +465,47 @@ html, body {
 .popup .p-nosched { color: var(--muted); font-style: italic; margin-top: 7px; }
 .popup .p-permit { margin-top: 8px; font-size: 0.7rem; color: var(--muted); font-weight: 600; }
 
-/* ---------- Scrollbar (webkit) ---------- */
-.results::-webkit-scrollbar { width: 0; height: 0; } /* Chrome/Safari — hide */
+#map .map-offline {
+  max-width: 320px;
+  margin: 0;
+  padding: 40px 24px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.results::-webkit-scrollbar { width: 0; height: 0; }
+
+/* Hover styles only where hover is real; touch would leave them stuck on. */
+@media (hover: hover) and (pointer: fine) {
+  .sidebar-head h1:hover .logo-emoji { animation: wiggle 0.6s ease-in-out; }
+  #refresh-btn:hover:not(:active):not(:disabled),
+  .chip:hover:not(:active):not(.active),
+  .result-item:hover:not(:active) { transform: translate(-1px, -1px); box-shadow: var(--card-shadow-lift); }
+  .linkish:hover { text-decoration: underline; }
+  .table-wrap tbody tr:hover td { background: var(--accent-soft); }
+}
+
+/* iOS zooms the page when a focused field's text is under 16px. */
+@media (pointer: coarse) {
+  .filters input[type="search"], .filters select { font-size: 16px; }
+}
 
 /* ---------- Narrow screens ---------- */
+/* The sidebar scrolls as one piece here; with only the list scrolling, the
+   filters filled the top half and left no room for results. */
 @media (max-width: 760px) {
   .app { flex-direction: column; }
-  .sidebar { width: 100%; max-height: 48vh; border-right: none; border-bottom: 2px solid var(--border); }
+  .sidebar {
+    width: 100%;
+    min-width: 0;
+    flex: none;
+    max-height: 52dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-right: none;
+    border-bottom: 2px solid var(--border);
+  }
+  .sidebar-head { padding-right: calc(16px + env(safe-area-inset-right, 0px)); }
+  .results { flex: none; overflow: visible; }
 }

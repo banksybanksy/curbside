@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>SF Food Truck Finder</title>
+  <title>Curbside · SF food trucks</title>
+  <meta name="description" content="Map of San Francisco's permitted food trucks and carts, filterable by food, permit status and day.">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffe9d2">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1f1811">
+  <meta name="color-scheme" content="light dark">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌮</text></svg>">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
@@ -13,27 +17,27 @@
   <div class="app">
     <aside class="sidebar">
       <header class="sidebar-head">
-        <h1><span class="logo-emoji">🌮</span> SF Food Trucks</h1>
-        <p class="tagline">find what's rollin' near you</p>
+        <h1><span class="logo-emoji" aria-hidden="true">🌮</span> Curbside</h1>
+        <p class="tagline">San Francisco's permitted food trucks and carts</p>
         <div class="data-meta">
-          <span id="data-freshness">Loading…</span>
-          <button id="refresh-btn" title="Re-pull data from DataSF"><span class="refresh-icon">↻</span> <span class="refresh-label">Refresh data</span></button>
+          <span id="data-freshness" role="status">Loading…</span>
+          <button id="refresh-btn" type="button" title="Re-pull data from DataSF"><span class="refresh-icon" aria-hidden="true">↻</span> <span class="refresh-label">Refresh data</span></button>
         </div>
       </header>
 
       <div class="filters">
-        <input type="search" id="search" placeholder="🔍 Search a street, spot, or vendor…" autocomplete="off">
-        <input type="search" id="food-search" placeholder="Craving something? tacos, coffee, dessert…" autocomplete="off">
-        <div class="chips" id="chips">
-          <button class="chip" data-food="taco">🌮 Tacos</button>
-          <button class="chip" data-food="burger">🍔 Burgers</button>
-          <button class="chip" data-food="coffee">☕ Coffee</button>
-          <button class="chip" data-food="dessert">🍦 Dessert</button>
-          <button class="chip" data-food="asian">🍜 Asian</button>
-          <button class="chip" data-food="sandwich">🥪 Sandwiches</button>
+        <input type="search" id="search" aria-label="Search by street, place or vendor" placeholder="🔍 Search a street, spot, or vendor…" autocomplete="off" enterkeyhint="search">
+        <input type="search" id="food-search" aria-label="Filter by food" placeholder="Food: tacos, coffee, dessert…" autocomplete="off" enterkeyhint="search">
+        <div class="chips" id="chips" role="group" aria-label="Quick food filters">
+          <button type="button" class="chip" data-food="taco" aria-pressed="false"><span aria-hidden="true">🌮</span> Tacos</button>
+          <button type="button" class="chip" data-food="burger" aria-pressed="false"><span aria-hidden="true">🍔</span> Burgers</button>
+          <button type="button" class="chip" data-food="coffee" aria-pressed="false"><span aria-hidden="true">☕</span> Coffee</button>
+          <button type="button" class="chip" data-food="dessert" aria-pressed="false"><span aria-hidden="true">🍦</span> Dessert</button>
+          <button type="button" class="chip" data-food="asian" aria-pressed="false"><span aria-hidden="true">🍜</span> Asian</button>
+          <button type="button" class="chip" data-food="sandwich" aria-pressed="false"><span aria-hidden="true">🥪</span> Sandwiches</button>
         </div>
         <div class="selects">
-          <select id="status-filter" title="Permit status">
+          <select id="status-filter" aria-label="Permit status">
             <option value="APPROVED" selected>Approved</option>
             <option value="">Any status</option>
             <option value="REQUESTED">Requested</option>
@@ -41,9 +45,9 @@
             <option value="SUSPEND">Suspended</option>
             <option value="ISSUED">Issued</option>
           </select>
-          <select id="day-filter" title="Day of operation">
+          <select id="day-filter" aria-label="Day of operation">
             <option value="">Any day</option>
-            <option value="now">Open now</option>
+            <option value="now">Open now (SF time)</option>
             <option value="Monday">Monday</option>
             <option value="Tuesday">Tuesday</option>
             <option value="Wednesday">Wednesday</option>
@@ -54,18 +58,18 @@
           </select>
         </div>
         <div class="result-bar">
-          <span id="result-count"></span>
-          <button id="clear-filters" class="linkish">Clear filters</button>
+          <span id="result-count" aria-live="polite"></span>
+          <button id="clear-filters" type="button" class="linkish">Clear filters</button>
         </div>
       </div>
 
-      <ul class="results" id="results"></ul>
+      <ul class="results" id="results" aria-label="Vendors"></ul>
     </aside>
 
     <main class="main">
-      <div class="view-toggle">
-        <button id="view-map" class="active">🗺️ Map</button>
-        <button id="view-table">📋 Table</button>
+      <div class="view-toggle" role="group" aria-label="View">
+        <button id="view-map" type="button" class="active" aria-pressed="true"><span aria-hidden="true">🗺️</span> Map</button>
+        <button id="view-table" type="button" aria-pressed="false"><span aria-hidden="true">📋</span> Table</button>
       </div>
       <div id="map"></div>
       <div id="table-view" class="table-wrap" hidden>
@@ -81,6 +85,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="schedule.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -1,0 +1,11 @@
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py39"
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+extend-select = ["I", "B", "UP"]
