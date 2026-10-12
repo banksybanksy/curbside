@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { sfClock, isOpenAt, scheduleDays, matchesFilters } = require("../static/schedule.js");
+const { sfClock, isOpenAt, shiftsOn, scheduleDays, matchesFilters } = require("../static/schedule.js");
 
 function truck(schedule, fields = {}) {
   return {
@@ -85,4 +85,12 @@ test("status, food and search filters combine", () => {
   assert.equal(matchesFilters(t, { ...noFilters, search: "steuart" }, clock), true);
   assert.equal(matchesFilters(t, { ...noFilters, search: "mission" }, clock), false);
   assert.equal(matchesFilters(truck([lunch], { food: undefined }), { ...noFilters, food: "taco" }, clock), false);
+});
+
+test("shiftsOn returns only that day's shifts, earliest first", () => {
+  const breakfast = { day: "Monday", start: "7AM", end: "10AM", start24: "07:00", end24: "10:00" };
+  const t = truck([lunch, lateNight, breakfast]);
+  assert.deepEqual(shiftsOn(t, "Monday"), [breakfast, lunch]);
+  assert.deepEqual(shiftsOn(t, "Friday"), [lateNight]);
+  assert.deepEqual(shiftsOn(t, "Sunday"), []);
 });

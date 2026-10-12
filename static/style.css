@@ -18,6 +18,7 @@
   --card-shadow: 3px 3px 0 rgba(43, 33, 25, 0.18);
   --card-shadow-lift: 5px 5px 0 rgba(43, 33, 25, 0.22);
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --font-display: "Bricolage Grotesque", ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -107,6 +108,7 @@ button, .chip, .result-item {
 
 .sidebar-head h1 {
   margin: 0;
+  font-family: var(--font-display);
   font-size: 1.6rem;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -181,6 +183,10 @@ button:focus-visible, .filters input:focus, .filters select:focus {
   outline: 3px solid var(--accent-text);
   outline-offset: 1px;
 }
+
+.filter-panel { display: flex; flex-direction: column; gap: 9px; }
+/* Only shown on narrow screens, where it collapses the panel above. */
+.filters-toggle { display: none; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 7px; }
 
@@ -282,6 +288,7 @@ button:focus-visible, .filters input:focus, .filters select:focus {
 .r-body { min-width: 0; flex: 1; overflow-wrap: anywhere; }
 
 .result-item .r-name {
+  font-family: var(--font-display);
   align-items: flex-start;
   font-weight: 800;
   font-size: 0.9rem;
@@ -290,6 +297,7 @@ button:focus-visible, .filters input:focus, .filters select:focus {
   gap: 8px;
 }
 .result-item .r-name .badge { flex: none; }
+.r-badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; flex: none; }
 
 .result-item .r-food {
   font-size: 0.77rem;
@@ -456,7 +464,7 @@ button:focus-visible, .filters input:focus, .filters select:focus {
   font-family: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-.popup h3 { margin: 0 0 5px; font-size: 1rem; font-weight: 800; }
+.popup h3 { margin: 0 0 5px; font-family: var(--font-display); font-size: 1.05rem; font-weight: 800; letter-spacing: -0.01em; }
 .popup .p-food { color: var(--muted); margin: 5px 0; }
 .popup .p-addr { margin: 5px 0; font-weight: 600; }
 .popup table { border-collapse: collapse; margin-top: 7px; }
@@ -508,10 +516,118 @@ button:focus-visible, .filters input:focus, .filters select:focus {
   }
   .sidebar-head { padding-right: calc(16px + env(safe-area-inset-right, 0px)); }
   .results { flex: none; overflow: visible; }
+  .tagline { display: none; }
+  .sidebar-head { padding-bottom: 6px; }
+
+  /* Search stays in view; the rest of the filters open on demand. */
+  .filters-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 9px 13px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    background: var(--panel);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: var(--card-shadow);
+  }
+  .filters-toggle .caret { margin-left: auto; transition: transform 160ms var(--ease-out); }
+  .filters-toggle[aria-expanded="true"] .caret { transform: rotate(180deg); }
+  .filter-count {
+    min-width: 20px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 0.72rem;
+    text-align: center;
+  }
+  .filter-panel { display: none; }
+  .filter-panel.open { display: flex; }
 }
 
-/* OpenStreetMap's standard tiles are bright and busy; soften them so pins lead, and invert them in dark mode. */
-.leaflet-tile-pane { filter: grayscale(0.75) sepia(0.12) contrast(0.88) brightness(1.04); }
-@media (prefers-color-scheme: dark) {
-  .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.5); }
+/* Mapbox wordmark, required next to Mapbox tiles. The SVG is Mapbox's own logo. */
+.mapbox-wordmark {
+  display: block;
+  width: 88px;
+  height: 23px;
+  margin: 0 0 6px 10px;
+  background: url("mapbox-logo.svg") no-repeat center / contain;
 }
+
+/* The keyless OpenStreetMap fallback is bright and busy; soften it so pins lead, and invert it in dark mode. */
+.osm-tiles { filter: grayscale(0.75) sepia(0.12) contrast(0.88) brightness(1.04); }
+@media (prefers-color-scheme: dark) {
+  .osm-tiles { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.5); }
+}
+
+/* ---------- Loading skeletons ---------- */
+@keyframes shimmer { to { background-position: -200% 0; } }
+.skeleton-note { padding: 0 2px 4px; color: var(--muted); font-size: 0.78rem; font-weight: 600; }
+.skeleton {
+  display: flex;
+  gap: 11px;
+  padding: 11px 12px;
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: var(--card-shadow);
+}
+.sk-emoji, .sk-lines span {
+  background: linear-gradient(100deg, var(--bg) 30%, color-mix(in srgb, var(--panel) 70%, var(--bg)) 50%, var(--bg) 70%) 100% 0 / 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+.sk-emoji { flex: none; width: 40px; height: 40px; border-radius: 12px; }
+.sk-lines { flex: 1; display: flex; flex-direction: column; gap: 7px; padding-top: 3px; }
+.sk-lines span { height: 10px; border-radius: 6px; }
+.sk-lines span:nth-child(1) { width: 62%; }
+.sk-lines span:nth-child(2) { width: 88%; }
+.sk-lines span:nth-child(3) { width: 45%; }
+
+/* ---------- Empty-state action ---------- */
+.empty-note .linkish { margin-top: 10px; font-size: 0.85rem; text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---------- Pins: hover lift and selected state ---------- */
+.pin-emoji { transition: transform 140ms var(--ease-out), box-shadow 140ms var(--ease-out); transform-origin: 0 100%; }
+@media (hover: hover) and (pointer: fine) {
+  .pin-emoji:hover { transform: translateY(-2px) scale(1.06); box-shadow: 3px 4px 0 rgba(43, 33, 25, 0.32); }
+}
+.pin-emoji.selected {
+  transform: scale(1.22);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  box-shadow: 3px 3px 0 rgba(43, 33, 25, 0.38), 0 0 0 4px color-mix(in srgb, var(--accent) 35%, transparent);
+  filter: none;
+}
+
+/* ---------- Clusters ---------- */
+.cluster {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 2.5px solid var(--border);
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 800;
+  box-shadow: var(--card-shadow);
+}
+.cluster.sm { width: 36px; height: 36px; margin: 4px; background: var(--panel); color: var(--text); }
+.cluster.lg { width: 52px; height: 52px; margin: -4px; font-size: 1.02rem; }
+@media (hover: hover) and (pointer: fine) {
+  .cluster:hover { box-shadow: var(--card-shadow-lift); }
+}
+
+/* ---------- Popup: today ---------- */
+.p-today { margin: 8px 0 2px; font-weight: 800; color: var(--green); }
+.p-today.none { color: var(--muted); font-weight: 700; }
+.popup tr.today td { color: var(--text); font-weight: 800; }
+.popup tr.today td:first-child { color: var(--accent-text); }
