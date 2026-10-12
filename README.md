@@ -1,48 +1,24 @@
 # Curbside
 
-Find San Francisco's permitted mobile food vendors on a map: where they park, what they serve, which days they are there, and whether their permit is current.
+A map of San Francisco's permitted food trucks and carts, built because the city publishes where they may operate but splits it across two datasets that are hard to read on their own.
 
-![Map of SF with food-truck pins and a filterable sidebar](docs/screenshots/map-overview.jpg)
+![Curbside: SF map with food-truck pins and a filterable sidebar](docs/screenshots/map-overview.jpg)
 
-## What it does
+Search by street or vendor, filter by food, permit status and day, or ask which trucks are scheduled to be open right now. Each pin opens the vendor's weekly schedule; a table view lists the same results.
 
-It pulls the city's mobile food vendor data from DataSF and puts every permitted truck and cart on a Leaflet map. You can search by street or vendor, filter by food type (with quick chips for tacos, coffee, dessert, and more), filter by permit status and by day of week, and check which trucks are open right now against your local time. Each pin opens the vendor's weekly schedule. There is also a table view. After the first load everything is served from a local cache, so the truck data works offline (the map tiles still need a connection).
+## How it works
 
-## Why I built it
+**The join is not on matching field names.** Permits (`rqzj-sfat`) identify a location by `objectid`; schedules (`jjew-r69b`) point at it with `locationid`. Joining by name matched nothing, every truck got an empty schedule, and the day filter hid all of them. The join in `_build_trucks` ([app.py](app.py)) pairs `locationid` with `objectid`.
 
-SF publishes where food trucks are allowed to operate, but the raw data is spread across two datasets and is awkward to read. I wanted a single map that answers "what is parked near me, and is it actually open," and building it turned out to be a good lesson in not trusting a dataset's field names.
+**Bad coordinates are flagged, not dropped.** Some permits carry `0,0` or points in the ocean. `_parse_latlng` rejects anything outside a San Francisco bounding box, but those vendors stay in the list and table marked "not on map", and the result count says how many. Vendors with no published schedule are labelled as such. Hiding either would make the data look more complete than it is.
 
-## Data sources
+**"Open now" runs on San Francisco time.** Schedule times are SF wall-clock times, so the check in [static/schedule.js](static/schedule.js) converts the current moment to `America/Los_Angeles` before comparing, and treats a shift that ends before it starts (9 PM–2 AM) as running past midnight.
 
-Both are Socrata Open Data API (SODA) datasets. No API key is required; an optional [Socrata app token](https://dev.socrata.com/docs/app-tokens) only raises the rate limit.
+![A truck popup showing its weekly schedule](docs/screenshots/truck-popup.jpg)
 
-| Source | What it provides | API key | Updates |
-|---|---|---|---|
-| [Mobile Food Facility Permit](https://data.sfgov.org/resource/rqzj-sfat.json) (`rqzj-sfat`) | One row per permitted location: vendor, food items, address, coordinates, permit status, expiration | No | Per DataSF's schedule; the app re-pulls on demand |
-| [Mobile Food Schedule](https://data.sfgov.org/resource/jjew-r69b.json) (`jjew-r69b`) | Weekly operating schedule (day and hours) per location | No | Per DataSF's schedule; the app re-pulls on demand |
+## Run it
 
-## The interesting problem
-
-**What I expected.** Two datasets, one for permits and one for schedules, joined on a shared location id, plotted at their coordinates. Straightforward.
-
-**What it actually did.** Two things were wrong. Trucks rendered in the wrong place, some in the ocean or at the null island off the coast of Africa. And trucks vanished the moment I applied a day filter, even trucks I knew operated on that day.
-
-**How I found out.** I stopped trusting the field names and read the raw SODA responses row by row. The location problem was bad coordinates: some permit records carry `0,0` or values well outside San Francisco. The vanishing was subtler. The permit dataset identifies a location with a field called `objectid`, but the schedule dataset refers to the same location with a field called `locationid`. My join was pairing fields by name, so it matched nothing and silently dropped every schedule row. Trucks ended up with empty schedules, and an empty schedule cannot match any day, so the day filter erased them.
-
-**What I decided to do.**
-
-- Join on the identifiers that actually correspond: the schedule's `locationid` against the permit's `objectid` ([app.py](app.py), `_build_trucks`). This is the fix that made schedules and the day filter work.
-- Reject coordinates outside a San Francisco bounding box, which drops both `0,0` and the ocean points ([app.py](app.py), `_parse_latlng`).
-- Keep trucks that have no valid coordinates in the results anyway. They stay searchable and are flagged "not on map," and the result count shows how many are off-map, rather than hiding permitted vendors.
-- Label vendors with no published schedule explicitly in their popup, instead of dropping them for having an empty schedule.
-
-**What I chose not to do.** I did not silently drop trucks with bad coordinates or missing schedules, because that would hide real permitted vendors and make the map look more complete than the data actually is. I did not try to guess or geocode missing coordinates.
-
-![A truck popup showing its full weekly schedule](docs/screenshots/truck-popup.jpg)
-
-## Running it locally
-
-Requires **Python 3.9+**.
+Requires Python 3.9+.
 
 ```bash
 python3 -m venv .venv
@@ -50,39 +26,39 @@ python3 -m venv .venv
 .venv/bin/python app.py
 ```
 
-Then open **http://localhost:5757**.
+Open http://localhost:5757. The first page load pulls both datasets from DataSF (a few seconds) and writes `data/cache.json`; after that the app serves from the cache. **Refresh data** (or `POST /api/refresh`) re-pulls, and a failed refresh keeps the old cache. Copy `.env.example` to `.env` to set an optional `SODA_APP_TOKEN`, which only raises DataSF's rate limit.
 
-On first load the app fetches both datasets from DataSF and writes a local cache to `data/cache.json`. After that it serves from the cache. Use the **Refresh data** button (or `POST /api/refresh`) to re-pull. Copy `.env.example` if you want to set an optional `SODA_APP_TOKEN`.
+Tests and lint, as CI runs them:
 
-## Architecture
+```bash
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/ruff check . && .venv/bin/pytest -q
+node --test "tests/*.test.js"
+```
 
-- **Frontend** (`static/index.html`, `app.js`, `style.css`) is a single-page app. It loads Leaflet from a CDN, renders the map with CARTO tiles, and does all filtering client-side.
-- **Server** (`app.py`) is Flask. On first load or refresh it pages through both SODA datasets, performs the permit-to-schedule join, filters coordinates, and writes the merged result to the cache.
-- **Cache** (`data/cache.json`) is the only persistence. It is regenerated on demand and safe to delete. A failed refresh keeps the existing cache.
+## Data and limits
 
-JSON API:
+Both datasets come from [DataSF](https://data.sfgov.org) through the Socrata (SODA) API; no key is required.
 
-| Endpoint | Description |
+| Dataset | Provides |
 |---|---|
-| `GET /api/trucks` | The full merged dataset, `{ fetched_at, trucks: [...] }` |
-| `POST /api/refresh` | Re-pull both datasets and rebuild the cache |
+| [Mobile Food Facility Permit](https://data.sfgov.org/resource/rqzj-sfat.json) | One row per permitted location: vendor, food, address, coordinates, permit status and expiry |
+| [Mobile Food Schedule](https://data.sfgov.org/resource/jjew-r69b.json) | Day and hours per location |
 
-## Known limitations
+- **A permit is not a sighting.** The data says where a vendor is allowed to park and when it has said it operates. It does not say a truck is there today, and "Open now" only means "scheduled now".
+- **One row per location, not per operator.** A company with many permitted spots appears many times.
+- **The bounding box is a rectangle.** A legitimate spot just outside it would be marked off-map.
+- **The map needs the internet; the data does not.** Leaflet and the CARTO tiles load from CDNs. Without them the list and table still work from the cache.
+- **Approved permits by default.** Requested, expired and suspended permits are hidden until you change the status filter.
+- **Client-side filtering.** Fine for the roughly 500 locations in the dataset, not designed for much more.
 
-- **The map needs internet, the data does not.** Leaflet and the CARTO map tiles load from CDNs, so offline the list and table still work but the map is blank. Only the truck data is cached locally.
-- **Vendors appear once per permitted location.** A single operator like "Off the Grid Services, LLC" shows up many times, one row per location, because that is how the permit dataset is structured. The app does not deduplicate operators.
-- **The SF bounding box is a coarse rectangle.** A legitimate truck just outside it would be marked off-map.
-- **"Open now" trusts the schedule times.** It compares your local clock against the dataset's `start24`/`end24` and handles overnight shifts, but malformed source times can make it wrong.
-- **Filtering is client-side.** Fine for the roughly 500 vendors here, but it would not scale to a much larger dataset without server-side paging.
-- **Status defaults to Approved.** Requested, expired, and suspended permits are hidden until you change the status filter.
-- **Local and single-user.** It binds to localhost and is not hosted.
+## Layout
 
-## Screenshots
+- `app.py`: Flask server. Pages through both SODA datasets, joins them, filters coordinates and writes the cache. Serves `GET /api/trucks` (`{ fetched_at, trucks }`) and `POST /api/refresh`.
+- `static/schedule.js`: schedule and filter logic, with no DOM, so it runs under `node --test`.
+- `static/app.js`, `index.html`, `style.css`: the single page. Leaflet from a CDN, no build step.
+- `tests/`: pytest for parsing, the join and the API; `node:test` for schedule filtering.
 
-Table view, for scanning vendors, food, addresses, and operating days at a glance:
+## Status
 
-![Table view](docs/screenshots/table-view.jpg)
-
-Filtering to a single food type (the map and list update together):
-
-![Filtered to taco trucks](docs/screenshots/food-filter-tacos.jpg)
+A personal project. It runs locally and is not hosted, and its data is only as current as your last refresh.
