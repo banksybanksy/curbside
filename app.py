@@ -30,6 +30,29 @@ log = logging.getLogger(__name__)
 _refresh_lock = threading.Lock()
 
 
+def load_dotenv(path):
+    """Read KEY=VALUE lines from a .env file. Variables already set in the environment win."""
+    try:
+        with open(path) as f:
+            lines = f.read().splitlines()
+    except OSError:
+        return
+    for line in lines:
+        key, sep, value = line.partition("=")
+        key = key.strip()
+        if sep and key and not key.startswith("#"):
+            os.environ.setdefault(key, value.strip().strip("'\""))
+
+
+def _mapbox_token():
+    # The token is sent to the browser, so only public (pk.) tokens are allowed.
+    token = os.environ.get("MAPBOX_TOKEN", "").strip()
+    if token and not token.startswith("pk."):
+        log.warning("MAPBOX_TOKEN is not a public pk. token; not sending it to the browser.")
+        return ""
+    return token
+
+
 def _soda_headers():
     # An app token only raises DataSF's rate limit; the API works without one.
     token = os.environ.get("SODA_APP_TOKEN")
@@ -150,6 +173,11 @@ def index():
     return app.send_static_file("index.html")
 
 
+@app.get("/api/config")
+def api_config():
+    return jsonify({"mapboxToken": _mapbox_token()})
+
+
 @app.get("/api/trucks")
 def api_trucks():
     payload = load_cache()
@@ -178,7 +206,10 @@ def api_refresh():
 
 
 if __name__ == "__main__":
+    load_dotenv(os.path.join(BASE_DIR, ".env"))
     print(f"Curbside → http://localhost:{PORT}")
     if load_cache() is None:
         print("No local cache yet. The first page load will fetch from DataSF.")
+    if not _mapbox_token():
+        print("No MAPBOX_TOKEN set. The map will show pins without a basemap (see README).")
     app.run(port=PORT, debug=False)

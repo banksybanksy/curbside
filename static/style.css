@@ -465,6 +465,17 @@ button:focus-visible, .filters input:focus, .filters select:focus {
 .popup .p-nosched { color: var(--muted); font-style: italic; margin-top: 7px; }
 .popup .p-permit { margin-top: 8px; font-size: 0.7rem; color: var(--muted); font-weight: 600; }
 
+.map-notice {
+  padding: 6px 12px;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  box-shadow: var(--card-shadow);
+}
+
 #map .map-offline {
   max-width: 320px;
   margin: 0;

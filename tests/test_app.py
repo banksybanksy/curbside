@@ -160,3 +160,32 @@ def test_failed_refresh_keeps_existing_cache(client, monkeypatch):
 
     assert client.post("/api/refresh").status_code == 502
     assert client.get("/api/trucks").get_json() == cached
+
+
+def test_config_serves_a_public_mapbox_token(client, monkeypatch):
+    monkeypatch.setenv("MAPBOX_TOKEN", "pk.abc")
+
+    assert client.get("/api/config").get_json() == {"mapboxToken": "pk.abc"}
+
+
+@pytest.mark.parametrize("token", ["", "sk.secret"])
+def test_config_withholds_missing_or_secret_tokens(client, monkeypatch, token):
+    monkeypatch.setenv("MAPBOX_TOKEN", token)
+
+    assert client.get("/api/config").get_json() == {"mapboxToken": ""}
+
+
+def test_load_dotenv_does_not_override_the_environment(tmp_path, monkeypatch):
+    env = tmp_path / ".env"
+    env.write_text("# comment\nMAPBOX_TOKEN='pk.from-file'\nSODA_APP_TOKEN=from-file\nnot a pair\n")
+    monkeypatch.delenv("MAPBOX_TOKEN", raising=False)
+    monkeypatch.setenv("SODA_APP_TOKEN", "from-shell")
+
+    app.load_dotenv(str(env))
+
+    assert app.os.environ["MAPBOX_TOKEN"] == "pk.from-file"
+    assert app.os.environ["SODA_APP_TOKEN"] == "from-shell"
+
+
+def test_load_dotenv_ignores_a_missing_file(tmp_path):
+    app.load_dotenv(str(tmp_path / "missing.env"))

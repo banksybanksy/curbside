@@ -20,16 +20,37 @@ const map = window.L ? L.map("map", { zoomControl: true }).setView([37.766, -122
 const markerLayer = map ? L.layerGroup().addTo(map) : null;
 const markersById = new Map();
 
-if (map) {
-  const darkMap = window.matchMedia("(prefers-color-scheme: dark)").matches;
+// Mapbox raster tiles need a public token, which the server reads from MAPBOX_TOKEN.
+async function addBasemap() {
+  let token = "";
+  try {
+    token = (await (await fetch("/api/config")).json()).mapboxToken || "";
+  } catch {}
+  if (!token) {
+    const note = L.control({ position: "topright" });
+    note.onAdd = () => {
+      const el = L.DomUtil.create("div", "map-notice");
+      el.textContent = "No basemap: set MAPBOX_TOKEN (see README).";
+      return el;
+    };
+    note.addTo(map);
+    return;
+  }
+  const style = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark-v11" : "light-v11";
   L.tileLayer(
-    `https://{s}.basemaps.cartocdn.com/${darkMap ? "dark_all" : "rastertiles/voyager"}/{z}/{x}/{y}{r}.png`,
+    `https://api.mapbox.com/styles/v1/mapbox/${style}/tiles/512/{z}/{x}/{y}{r}?access_token=${encodeURIComponent(token)}`,
     {
-      maxZoom: 19,
+      tileSize: 512,
+      zoomOffset: -1,
+      maxZoom: 20,
       attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> <a href="https://www.mapbox.com/map-feedback/">Improve this map</a>',
     }
   ).addTo(map);
+}
+
+if (map) {
+  addBasemap();
 } else {
   document.getElementById("map").innerHTML =
     `<p class="map-offline">The map library didn't load, so the map is unavailable. The list and table still work.</p>`;
