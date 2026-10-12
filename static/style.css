@@ -509,3 +509,9 @@ button:focus-visible, .filters input:focus, .filters select:focus {
   .sidebar-head { padding-right: calc(16px + env(safe-area-inset-right, 0px)); }
   .results { flex: none; overflow: visible; }
 }
+
+/* OpenStreetMap's standard tiles are bright and busy; soften them so pins lead, and invert them in dark mode. */
+.leaflet-tile-pane { filter: grayscale(0.75) sepia(0.12) contrast(0.88) brightness(1.04); }
+@media (prefers-color-scheme: dark) {
+  .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.5); }
+}
