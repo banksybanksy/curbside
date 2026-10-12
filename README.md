@@ -6,9 +6,9 @@ A map of San Francisco's permitted food trucks and carts, built because the city
 
 ![Curbside: SF map with food-truck pins and a filterable sidebar](docs/screenshots/map-overview.jpg)
 
-<sub>Captured October 12, 2026 from live DataSF permits and schedules.</sub>
+<sub>Captured October 12, 2026 from live DataSF permits and schedules, on Mapbox tiles. Nearby trucks cluster until you zoom in.</sub>
 
-Search by street or vendor, filter by food, permit status and day, or ask which trucks are scheduled to be open right now. Each pin opens the vendor's weekly schedule; a table view lists the same results.
+Search by street or vendor, filter by food, permit status and day, or ask which trucks are scheduled to be open right now. Each pin opens the vendor's weekly schedule, with today's hours and the current day highlighted; a table view lists the same results. On a phone the secondary filters fold away behind a Filters button so the list and map keep their room.
 
 ## How it works
 
@@ -19,6 +19,8 @@ Search by street or vendor, filter by food, permit status and day, or ask which 
 **"Open now" runs on San Francisco time.** Schedule times are SF wall-clock times, so the check in [static/schedule.js](static/schedule.js) converts the current moment to `America/Los_Angeles` before comparing, and treats a shift that ends before it starts (9 PM–2 AM) as running past midnight.
 
 ![A truck popup showing its weekly schedule](docs/screenshots/truck-popup.jpg)
+
+<img src="docs/screenshots/mobile.jpg" alt="Curbside on a phone: search, a collapsed Filters button, the vendor list and the clustered map" width="260">
 
 ## Run it
 

@@ -37,6 +37,11 @@ function isOpenAt(truck, clock) {
   });
 }
 
+// Today's shifts in the order they start, for the popup's "Today" line.
+function shiftsOn(truck, day) {
+  return truck.schedule.filter((s) => s.day === day).sort((a, b) => toMinutes(a.start24 || "0:0") - toMinutes(b.start24 || "0:0"));
+}
+
 function scheduleDays(truck) {
   const days = [...new Set(truck.schedule.map((s) => s.day))];
   days.sort((a, b) => DAYS.indexOf(a) - DAYS.indexOf(b));
@@ -59,5 +64,5 @@ function matchesFilters(truck, filters, clock) {
 }
 
 if (typeof module === "object") {
-  module.exports = { DAYS, sfClock, toMinutes, isOpenAt, scheduleDays, matchesFilters };
+  module.exports = { DAYS, sfClock, toMinutes, isOpenAt, shiftsOn, scheduleDays, matchesFilters };
 }

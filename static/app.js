@@ -16,8 +16,19 @@ const state = {
 
 // ---------- Map setup ----------
 // Leaflet comes from a CDN. Without it the list and table still work.
-const map = window.L ? L.map("map", { zoomControl: true }).setView([37.766, -122.43], 13) : null;
-const markerLayer = map ? L.layerGroup().addTo(map) : null;
+const map = window.L ? L.map("map", { zoomControl: true, maxZoom: 19 }).setView([37.766, -122.43], 13) : null;
+// Around 500 pins overlap badly when zoomed out, so group them. If the plugin's CDN fails, plain pins still work.
+function clusterIcon(cluster) {
+  const n = cluster.getChildCount();
+  const size = n < 10 ? "sm" : n < 50 ? "md" : "lg";
+  return L.divIcon({ className: "", html: `<div class="cluster ${size}"><span>${n}</span></div>`, iconSize: [44, 44] });
+}
+const markerLayer = !map
+  ? null
+  : (L.markerClusterGroup
+      ? L.markerClusterGroup({ maxClusterRadius: 46, disableClusteringAtZoom: 17, showCoverageOnHover: false, iconCreateFunction: clusterIcon })
+      : L.layerGroup()
+    ).addTo(map);
 const markersById = new Map();
 
 // Mapbox raster tiles need a public token, which the server reads from MAPBOX_TOKEN. Without one the map
@@ -128,13 +139,19 @@ function applyFilters() {
 }
 
 // ---------- Rendering ----------
+function todayLine(t, clock) {
+  const shifts = shiftsOn(t, clock.day);
+  if (!shifts.length) return `<div class="p-today none">Not scheduled today</div>`;
+  return `<div class="p-today">Today ${shifts.map((s) => `${esc(s.start)} – ${esc(s.end)}`).join(", ")}</div>`;
+}
+
 function popupHtml(t, clock) {
   let sched;
   if (t.schedule.length) {
     const rows = t.schedule
-      .map((s) => `<tr><td>${esc(s.day.slice(0, 3))}</td><td>${esc(s.start)} – ${esc(s.end)}</td></tr>`)
+      .map((s) => `<tr${s.day === clock.day ? ' class="today"' : ""}><td>${esc(s.day.slice(0, 3))}</td><td>${esc(s.start)} – ${esc(s.end)}</td></tr>`)
       .join("");
-    sched = `<table>${rows}</table>`;
+    sched = `${todayLine(t, clock)}<table>${rows}</table>`;
   } else {
     sched = `<div class="p-nosched">No published schedule for this location.</div>`;
   }
@@ -149,32 +166,50 @@ function popupHtml(t, clock) {
   </div>`;
 }
 
+// The pin's point is its bottom-left corner (see .pin-emoji), so anchor there.
+function pinIcon(t) {
+  const selected = t.id === state.selectedId ? " selected" : "";
+  return L.divIcon({
+    className: "",
+    html: `<div class="pin-emoji ${statusClass(t.status)}${selected}">${foodEmoji(t)}</div>`,
+    iconSize: [34, 34],
+    iconAnchor: [1, 33],
+    popupAnchor: [16, -30],
+  });
+}
+
+// Only the previous and new selection change, so the open popup and cluster state survive.
+function selectTruck(id) {
+  const previous = state.selectedId;
+  state.selectedId = id;
+  for (const key of [previous, id]) {
+    const marker = markersById.get(key);
+    const truck = state.trucks.find((t) => t.id === key);
+    if (marker && truck) marker.setIcon(pinIcon(truck));
+  }
+  highlightListItem();
+}
+
 function renderMarkers(clock) {
   if (!map) return;
   markerLayer.clearLayers();
   markersById.clear();
   for (const t of state.filtered) {
     if (t.lat == null || t.lng == null) continue;
-    // The pin's point is its bottom-left corner (see .pin-emoji), so anchor there.
-    const icon = L.divIcon({
-      className: "",
-      html: `<div class="pin-emoji ${statusClass(t.status)}">${foodEmoji(t)}</div>`,
-      iconSize: [34, 34],
-      iconAnchor: [1, 33],
-      popupAnchor: [16, -30],
-    });
-    const m = L.marker([t.lat, t.lng], { icon, title: t.name }).bindPopup(popupHtml(t, clock), { maxWidth: 280 });
-    m.on("click", () => {
-      state.selectedId = t.id;
-      highlightListItem();
-    });
-    m.addTo(markerLayer);
+    const m = L.marker([t.lat, t.lng], { icon: pinIcon(t), title: t.name }).bindPopup(popupHtml(t, clock), { maxWidth: 280 });
+    m.on("click", () => selectTruck(t.id));
+    markerLayer.addLayer(m);
     markersById.set(t.id, m);
   }
 }
 
 function hasActiveFilters() {
   return state.search || state.food || state.day || state.status !== DEFAULT_STATUS;
+}
+
+// On narrow screens the filter panel is collapsed, so say how many of its filters are on.
+function activeFilterCount() {
+  return [state.food, state.day, state.status !== DEFAULT_STATUS].filter(Boolean).length;
 }
 
 function listNote(emoji, html) {
@@ -184,7 +219,8 @@ function listNote(emoji, html) {
 function renderList(clock) {
   const ul = $("#results");
   if (state.loading) {
-    ul.innerHTML = listNote("⏳", "Loading permits…<br>The first load pulls from DataSF and can take a few seconds.");
+    ul.innerHTML = `<li class="skeleton-note">Loading permits… the first load pulls from DataSF and can take a few seconds.</li>`
+      + Array.from({ length: 6 }, () => `<li class="skeleton" aria-hidden="true"><span class="sk-emoji"></span><span class="sk-lines"><span></span><span></span><span></span></span></li>`).join("");
     return;
   }
   if (state.loadError) {
@@ -193,18 +229,20 @@ function renderList(clock) {
   }
   if (!state.filtered.length) {
     ul.innerHTML = hasActiveFilters()
-      ? listNote("🫗", "No vendors match these filters.<br>Try another day, or set status to Any status.")
+      ? listNote("🫗", `No vendors match these filters.<br><button type="button" class="linkish" data-action="reset">Reset filters</button>`)
       : listNote("🫗", "The dataset came back empty.");
     return;
   }
   ul.innerHTML = state.filtered
     .map((t) => {
-      const badge = isOpenAt(t, clock) ? `<span class="badge open-now">Open</span>` : statusBadge(t);
+      // Open-now and permit status are different facts; an expired permit can still have a schedule.
+      const open = isOpenAt(t, clock);
+      const badge = (open ? `<span class="badge open-now">Open</span>` : "") + (open && t.status === "APPROVED" ? "" : statusBadge(t));
       const noMap = t.lat == null ? ` <span class="r-nomap">⚠ not on map</span>` : "";
       return `<li><button type="button" class="result-item${t.id === state.selectedId ? " selected" : ""}" data-id="${esc(t.id)}">
         <span class="r-emoji" aria-hidden="true">${foodEmoji(t)}</span>
         <span class="r-body">
-          <span class="r-name"><span>${esc(t.name)}</span>${badge}</span>
+          <span class="r-name"><span>${esc(t.name)}</span><span class="r-badges">${badge}</span></span>
           ${t.food ? `<span class="r-food">${esc(t.food)}</span>` : ""}
           <span class="r-addr">${esc(t.address || t.locationDescription || "")}${noMap}</span>
         </span>
@@ -243,6 +281,10 @@ function render(clock) {
     $("#result-count").textContent =
       plural(state.filtered.length, "vendor") + (offMap ? ` · ${offMap} not on map` : "");
   }
+  $("#clear-filters").hidden = !hasActiveFilters();
+  const count = activeFilterCount();
+  $("#filter-count").hidden = !count;
+  $("#filter-count").textContent = count;
   renderMarkers(clock);
   renderList(clock);
   renderTable();
@@ -250,16 +292,21 @@ function render(clock) {
 
 // ---------- Interactions ----------
 function focusTruck(id) {
-  state.selectedId = id;
-  highlightListItem();
+  selectTruck(id);
   const m = markersById.get(id);
-  if (m) {
+  if (!m) return;
+  if (markerLayer.zoomToShowLayer) {
+    // Expands whatever cluster hides the pin, then opens it.
+    map.setView(m.getLatLng(), Math.max(map.getZoom(), 15));
+    markerLayer.zoomToShowLayer(m, () => m.openPopup());
+  } else {
     map.setView(m.getLatLng(), Math.max(map.getZoom(), 15));
     m.openPopup();
   }
 }
 
 $("#results").addEventListener("click", (e) => {
+  if (e.target.closest('[data-action="reset"]')) return resetFilters();
   const item = e.target.closest(".result-item");
   if (item) focusTruck(item.dataset.id);
 });
@@ -320,7 +367,7 @@ $("#chips").addEventListener("click", (e) => {
   applyFilters();
 });
 
-$("#clear-filters").addEventListener("click", () => {
+function resetFilters() {
   state.search = state.food = state.day = "";
   state.status = DEFAULT_STATUS;
   $("#search").value = $("#food-search").value = "";
@@ -328,6 +375,12 @@ $("#clear-filters").addEventListener("click", () => {
   $("#day-filter").value = "";
   syncChips();
   applyFilters();
+}
+$("#clear-filters").addEventListener("click", resetFilters);
+
+$("#filters-toggle").addEventListener("click", () => {
+  const open = $("#filter-panel").classList.toggle("open");
+  $("#filters-toggle").setAttribute("aria-expanded", open);
 });
 
 function setView(view) {
