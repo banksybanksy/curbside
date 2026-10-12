@@ -21,15 +21,12 @@ const markerLayer = map ? L.layerGroup().addTo(map) : null;
 const markersById = new Map();
 
 if (map) {
-  const darkMap = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  L.tileLayer(
-    `https://{s}.basemaps.cartocdn.com/${darkMap ? "dark_all" : "rastertiles/voyager"}/{z}/{x}/{y}{r}.png`,
-    {
-      maxZoom: 19,
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    }
-  ).addTo(map);
+  // OpenStreetMap's standard tiles need no key. CARTO's basemaps now require one and
+  // return an "API key required" watermark without it. Dark mode inverts the tiles in CSS.
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  }).addTo(map);
 } else {
   document.getElementById("map").innerHTML =
     `<p class="map-offline">The map library didn't load, so the map is unavailable. The list and table still work.</p>`;

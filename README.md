@@ -4,6 +4,8 @@ A map of San Francisco's permitted food trucks and carts, built because the city
 
 ![Curbside: SF map with food-truck pins and a filterable sidebar](docs/screenshots/map-overview.jpg)
 
+<sub>Captured October 12, 2026 from live DataSF permits and schedules.</sub>
+
 Search by street or vendor, filter by food, permit status and day, or ask which trucks are scheduled to be open right now. Each pin opens the vendor's weekly schedule; a table view lists the same results.
 
 ## How it works
@@ -48,7 +50,7 @@ Both datasets come from [DataSF](https://data.sfgov.org) through the Socrata (SO
 - **A permit is not a sighting.** The data says where a vendor is allowed to park and when it has said it operates. It does not say a truck is there today, and "Open now" only means "scheduled now".
 - **One row per location, not per operator.** A company with many permitted spots appears many times.
 - **The bounding box is a rectangle.** A legitimate spot just outside it would be marked off-map.
-- **The map needs the internet; the data does not.** Leaflet and the CARTO tiles load from CDNs. Without them the list and table still work from the cache.
+- **The map needs the internet; the data does not.** Leaflet loads from a CDN and the map tiles from OpenStreetMap. Without them the list and table still work from the cache.
 - **Approved permits by default.** Requested, expired and suspended permits are hidden until you change the status filter.
 - **Client-side filtering.** Fine for the roughly 500 locations in the dataset, not designed for much more.
 
