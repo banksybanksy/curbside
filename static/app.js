@@ -20,20 +20,34 @@ const map = window.L ? L.map("map", { zoomControl: true }).setView([37.766, -122
 const markerLayer = map ? L.layerGroup().addTo(map) : null;
 const markersById = new Map();
 
-// Mapbox raster tiles need a public token, which the server reads from MAPBOX_TOKEN.
+// Mapbox raster tiles need a public token, which the server reads from MAPBOX_TOKEN. Without one the map
+// falls back to OpenStreetMap's keyless tiles, so a fresh clone still shows streets.
+const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+function addMapboxWordmark() {
+  const logo = L.control({ position: "bottomleft" });
+  logo.onAdd = () => {
+    const el = L.DomUtil.create("a", "mapbox-wordmark");
+    el.href = "https://www.mapbox.com/";
+    el.target = "_blank";
+    el.rel = "noopener";
+    el.setAttribute("aria-label", "Mapbox");
+    return el;
+  };
+  logo.addTo(map);
+}
+
 async function addBasemap() {
   let token = "";
   try {
     token = (await (await fetch("/api/config")).json()).mapboxToken || "";
   } catch {}
   if (!token) {
-    const note = L.control({ position: "topright" });
-    note.onAdd = () => {
-      const el = L.DomUtil.create("div", "map-notice");
-      el.textContent = "No basemap: set MAPBOX_TOKEN (see README).";
-      return el;
-    };
-    note.addTo(map);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      className: "osm-tiles",
+      attribution: OSM_ATTRIBUTION,
+    }).addTo(map);
     return;
   }
   const style = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark-v11" : "light-v11";
@@ -47,6 +61,7 @@ async function addBasemap() {
         '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> <a href="https://www.mapbox.com/map-feedback/">Improve this map</a>',
     }
   ).addTo(map);
+  addMapboxWordmark();
 }
 
 if (map) {

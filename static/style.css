@@ -465,17 +465,6 @@ button:focus-visible, .filters input:focus, .filters select:focus {
 .popup .p-nosched { color: var(--muted); font-style: italic; margin-top: 7px; }
 .popup .p-permit { margin-top: 8px; font-size: 0.7rem; color: var(--muted); font-weight: 600; }
 
-.map-notice {
-  padding: 6px 12px;
-  border: 2px solid var(--border);
-  border-radius: 999px;
-  background: var(--panel);
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 700;
-  box-shadow: var(--card-shadow);
-}
-
 #map .map-offline {
   max-width: 320px;
   margin: 0;
@@ -519,4 +508,19 @@ button:focus-visible, .filters input:focus, .filters select:focus {
   }
   .sidebar-head { padding-right: calc(16px + env(safe-area-inset-right, 0px)); }
   .results { flex: none; overflow: visible; }
+}
+
+/* Mapbox wordmark, required next to Mapbox tiles. The SVG is Mapbox's own logo. */
+.mapbox-wordmark {
+  display: block;
+  width: 88px;
+  height: 23px;
+  margin: 0 0 6px 10px;
+  background: url("mapbox-logo.svg") no-repeat center / contain;
+}
+
+/* The keyless OpenStreetMap fallback is bright and busy; soften it so pins lead, and invert it in dark mode. */
+.osm-tiles { filter: grayscale(0.75) sepia(0.12) contrast(0.88) brightness(1.04); }
+@media (prefers-color-scheme: dark) {
+  .osm-tiles { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.5); }
 }
